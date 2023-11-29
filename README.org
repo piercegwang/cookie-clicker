@@ -1,0 +1,3 @@
+#+title: Cookie Clicker in Emacs
+
+This is an incredibly quick attempt at a cookie clicker in Emacs heavily using ChatGPT to generate and edit code.
