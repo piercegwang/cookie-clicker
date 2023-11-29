@@ -22,6 +22,9 @@
 (defvar cookie-clicker-update-timer nil
   "Timer for automatic updates in Cookie Clicker mode.")
 
+(defcustom cookie-clicker-buffer-name "*Cookie Clicker*"
+  "Name used for Tetris buffer."
+  :type 'string)
 (defvar-local cookie-clicker-cookie-count 0)
 (defvar-local cookie-clicker-cookies-per-second 0)
 (defvar-local cookie-clicker-automatic-clicker-timer nil)
@@ -102,18 +105,19 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
 
 (defun cookie-clicker-update-cookie-display ()
   "Update the display with the current cookie count and CPS."
-  (let ((inhibit-read-only t))
-    (save-excursion
-      (goto-char (point-min))
-      (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
-        (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
-      (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
-        (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second))))))
+  (when (string= (buffer-name) cookie-clicker-buffer-name)
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
+          (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
+        (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
+          (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second)))))))
 
 (defun cookie-clicker-start ()
   "Start a new Cookie Clicker game in a new buffer."
   (interactive)
-  (let ((buffer (generate-new-buffer "*Cookie Clicker*")))
+  (let ((buffer (generate-new-buffer cookie-clicker-buffer-name)))
     (switch-to-buffer buffer)
     (cookie-clicker-mode)
     (cookie-clicker-setup)
