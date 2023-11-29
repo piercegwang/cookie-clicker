@@ -27,16 +27,54 @@
 (defvar-local cookie-clicker-automatic-clicker-timer nil)
 (defvar-local cookie-clicker-automatic-clicker-enabled nil)
 
+(defvar cookie-clicker-upgrades
+  '((cursor 10 1)
+    (grandma 50 5)
+    (farm 100 10))
+  "List of upgrades with their names, costs, and CPS increase.")
+
+(defun cookie-clicker-buy-upgrade (upgrade)
+  "Buy an upgrade to increase cookies per second (CPS).
+UPGRADE is a symbol representing the kind of upgrade to buy."
+  (let ((upgrade-info (assoc upgrade cookie-clicker-upgrades)))
+    (if upgrade-info
+        (let ((cost (cadr upgrade-info))
+              (cps-increase (caddr upgrade-info)))
+          (if (>= cookie-clicker-cookie-count cost)
+              (progn
+                (setq cookie-clicker-cookie-count (- cookie-clicker-cookie-count cost)
+                      cookie-clicker-cookies-per-second (+ cookie-clicker-cookies-per-second cps-increase))
+                (cookie-clicker-update-cookie-display)
+                (message "You bought a %s upgrade! CPS: %d" upgrade cookie-clicker-cookies-per-second))
+            (message "Not enough cookies to buy the %s upgrade. You need at least %d cookies." upgrade cost)))
+      (message "Unknown upgrade: %s" upgrade))))
+
+(defun cookie-clicker-select-upgrade ()
+  "Prompt the user to select an upgrade and buy it."
+  (interactive)
+  (let* ((upgrade-names (mapcar 'car cookie-clicker-upgrades))
+         (selected-upgrade (completing-read "Select an upgrade to buy: " upgrade-names nil t)))
+    (when selected-upgrade
+      (let ((upgrade-info (assoc-string selected-upgrade upgrade-names)))
+        (if upgrade-info
+            (cookie-clicker-buy-upgrade (intern selected-upgrade))
+          (message "Invalid upgrade selected."))))))
+
 (defun cookie-clicker-setup ()
   "Set up the initial state of the Cookie Clicker game."
   (let ((buffer-read-only nil))
     (erase-buffer)
     (insert "Welcome to Cookie Clicker!\n\n")
     (insert "C-c C-c to click cookies\n")
-    (insert "C-c u to buy upgrades\n")
-    (insert "C-c a to toggle automatic clicker\n\n")
-    (insert "Cookies: Cookies: 0\n")
-    (insert "CPS: 0\n")))
+    (insert "Available upgrades:\n")
+    (dolist (upgrade cookie-clicker-upgrades)
+      (insert (format "%s: Cost %d cookies, CPS + %d\n"
+                      (car upgrade) ; Name
+                      (cadr upgrade) ; Cost
+                      (caddr upgrade)))) ; CPS Increase
+    (insert "\nCookies: 0\n")
+    (insert "CPS: 0\n")
+    (cookie-clicker-update-cookie-display)))
 
 (defun cookie-clicker-click-cookie (&optional n)
   "Click a cookie and increment the cookie count by N (default is 1)."
@@ -62,32 +100,15 @@
     (setq cookie-clicker-automatic-clicker-timer (run-at-time 1 1 'cookie-clicker-auto-click-cookie))
     (message "Automatic clicker enabled. CPS: %d" cookie-clicker-cookies-per-second)))
 
-(defun cookie-clicker-buy-upgrade (arg)
-  "Buy an upgrade to increase cookies per second (CPS).
-With a universal argument ARG, buy multiple upgrades at a time."
-  (interactive "P")
-  (let ((num-upgrades (if arg (prefix-numeric-value arg) 1)))
-    (if (>= cookie-clicker-cookie-count (* 10 num-upgrades))
-        (progn
-          (setq cookie-clicker-cookie-count (- cookie-clicker-cookie-count (* 10 num-upgrades))
-                cookie-clicker-cookies-per-second (+ cookie-clicker-cookies-per-second num-upgrades))
-          (message "You bought %d upgrade%s! CPS: %d"
-                   num-upgrades (if (= num-upgrades 1) "" "s") cookie-clicker-cookies-per-second)
-          (cookie-clicker-update-cookie-display))
-      (message "Not enough cookies to buy upgrades. You need at least %d cookies."
-               (* 10 num-upgrades)))))
-
 (defun cookie-clicker-update-cookie-display ()
   "Update the display with the current cookie count and CPS."
   (let ((inhibit-read-only t))
     (save-excursion
       (goto-char (point-min))
-      (search-forward "Cookies: ")
-      (delete-region (point) (line-end-position))
-      (insert (format "%d" cookie-clicker-cookie-count))
-      (search-forward "CPS: ")
-      (delete-region (point) (line-end-position))
-      (insert (format "%d" cookie-clicker-cookies-per-second)))))
+      (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
+        (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
+      (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
+        (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second))))))
 
 (defun cookie-clicker-start ()
   "Start a new Cookie Clicker game in a new buffer."
@@ -133,7 +154,7 @@ With a universal argument ARG, buy multiple upgrades at a time."
 (add-hook 'cookie-clicker-mode-hook 'cookie-clicker-mode-disable)
 
 (define-key cookie-clicker-mode-map (kbd "C-c C-c") 'cookie-clicker-click-cookie)
-(define-key cookie-clicker-mode-map (kbd "C-c u") 'cookie-clicker-buy-upgrade)
+(define-key cookie-clicker-mode-map (kbd "C-c u") 'cookie-clicker-select-upgrade)
 (define-key cookie-clicker-mode-map (kbd "C-c a") 'cookie-clicker-toggle-automatic-clicker)
 
 (provide 'cookie-clicker-mode)
