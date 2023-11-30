@@ -30,23 +30,41 @@
 (defvar-local cookie-clicker-automatic-clicker-timer nil)
 (defvar-local cookie-clicker-automatic-clicker-enabled nil)
 
-(defvar cookie-clicker-upgrades
-  '((cursor 10 1)
-    (grandma 50 5)
-    (farm 100 10))
-  "List of upgrades with their names, costs, and CPS increase.")
+(defvar-local cookie-clicker-upgrades
+  '((cursor 10 1 0)
+    (grandma 50 5 0)
+    (farm 100 10 0))
+  "List of upgrades with their names, costs, CPS increase, and count.")
+
+;; (defun cookie-clicker-buy-upgrade (upgrade)
+;;   "Buy an upgrade to increase cookies per second (CPS).
+;; UPGRADE is a symbol representing the kind of upgrade to buy."
+;;   (let ((upgrade-info (assoc upgrade cookie-clicker-upgrades)))
+;;     (if upgrade-info
+;;         (let ((cost (cadr upgrade-info))
+;;               (cps-increase (caddr upgrade-info)))
+;;           (if (>= cookie-clicker-cookie-count cost)
+;;               (progn
+;;                 (setq cookie-clicker-cookie-count (- cookie-clicker-cookie-count cost)
+;;                       cookie-clicker-cookies-per-second (+ cookie-clicker-cookies-per-second cps-increase))
+;;                 (cookie-clicker-update-cookie-display)
+;;                 (message "You bought a %s upgrade! CPS: %d" upgrade cookie-clicker-cookies-per-second))
+;;             (message "Not enough cookies to buy the %s upgrade. You need at least %d cookies." upgrade cost)))
+;;       (message "Unknown upgrade: %s" upgrade))))
 
 (defun cookie-clicker-buy-upgrade (upgrade)
   "Buy an upgrade to increase cookies per second (CPS).
 UPGRADE is a symbol representing the kind of upgrade to buy."
   (let ((upgrade-info (assoc upgrade cookie-clicker-upgrades)))
     (if upgrade-info
-        (let ((cost (cadr upgrade-info))
-              (cps-increase (caddr upgrade-info)))
+        (let* ((cost (cadr upgrade-info))
+               (cps-increase (caddr upgrade-info))
+               (count (cadddr upgrade-info)))
           (if (>= cookie-clicker-cookie-count cost)
               (progn
                 (setq cookie-clicker-cookie-count (- cookie-clicker-cookie-count cost)
                       cookie-clicker-cookies-per-second (+ cookie-clicker-cookies-per-second cps-increase))
+                (setcar (last upgrade-info) (1+ count))
                 (cookie-clicker-update-cookie-display)
                 (message "You bought a %s upgrade! CPS: %d" upgrade cookie-clicker-cookies-per-second))
             (message "Not enough cookies to buy the %s upgrade. You need at least %d cookies." upgrade cost)))
@@ -75,11 +93,16 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
     (insert "C-c C-c to click cookies\n")
     (insert "Available upgrades:\n")
     (dolist (upgrade cookie-clicker-upgrades)
-      (let ((name (car upgrade)))
-        (cookie-clicker-clickable-button (format "- %s: Cost %d cookies, CPS + %d" name (cadr upgrade) (caddr upgrade))
+      (let* ((name (car upgrade))
+             (cost (cadr upgrade))
+             (cps-increase (caddr upgrade))
+             (count (cadddr upgrade)))
+        (insert "- ")
+        (cookie-clicker-clickable-button (format "[Buy]" name cost cps-increase count)
                           `(lambda (_button) (cookie-clicker-buy-upgrade ',name)))
+        (insert (format " %s: Cost %d cookies, CPS + %d (Owned: %d)" name cost cps-increase count))
         (insert "\n")))
-    (insert "-------------------\n")
+    (insert "----------------")
     (insert "\nCookies: 0\n")
     (insert "CPS: 0\n")
     (cookie-clicker-update-cookie-display)))
@@ -108,16 +131,35 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
     (setq cookie-clicker-automatic-clicker-timer (run-at-time 1 1 'cookie-clicker-auto-click-cookie))
     (message "Automatic clicker enabled. CPS: %d" cookie-clicker-cookies-per-second)))
 
+;; (defun cookie-clicker-update-cookie-display ()
+;;   "Update the display with the current cookie count and CPS."
+;;   (when (string= (buffer-name) cookie-clicker-buffer-name)
+;;     (let ((inhibit-read-only t))
+;;       (save-excursion
+;;         (goto-char (point-min))
+;;         (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
+;;           (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
+;;         (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
+;;           (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second)))))))
+
 (defun cookie-clicker-update-cookie-display ()
-  "Update the display with the current cookie count and CPS."
+  "Update the display with the current cookie count, CPS, and upgrade counts."
   (when (string= (buffer-name) cookie-clicker-buffer-name)
     (let ((inhibit-read-only t))
       (save-excursion
         (goto-char (point-min))
+        (while (re-search-forward "\\([a-zA-Z]+\\): Cost \\([0-9]+\\) cookies, CPS \\+ \\([0-9]+\\) (Owned: \\([0-9]+\\))" nil t)
+          (let* ((upgrade-sym (intern (match-string 1)))
+                 (upgrade (assoc upgrade-sym cookie-clicker-upgrades))
+                 (cost (cadr upgrade))
+                 (cps-increase (caddr upgrade))
+                 (count (cadddr upgrade)))
+            (replace-match (format "%s: Cost %d cookies, CPS + %d (Owned: %d)" upgrade-sym cost cps-increase count))))
         (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
           (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
         (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
-          (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second)))))))
+          (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second)))))
+    (message "CPS: %d, Cookies: %d" cookie-clicker-cookies-per-second cookie-clicker-cookie-count)))
 
 (defun cookie-clicker-start ()
   "Start a new Cookie Clicker game in a new buffer."
