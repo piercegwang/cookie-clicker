@@ -19,18 +19,18 @@
 ;;
 ;;; Code:
 
-(defvar cookie-clicker-update-timer nil
-  "Timer for automatic updates in Cookie Clicker mode.")
 
 (defcustom cookie-clicker-buffer-name "*Cookie Clicker*"
   "Name used for Tetris buffer."
   :type 'string)
-(defvar-local cookie-clicker-cookie-count 0)
-(defvar-local cookie-clicker-cookies-per-second 0)
-(defvar-local cookie-clicker-automatic-clicker-timer nil)
-(defvar-local cookie-clicker-automatic-clicker-enabled nil)
+(defvar cookie-clicker-update-timer nil
+  "Timer for automatic updates in Cookie Clicker mode.")
+(defvar cookie-clicker-cookie-count 0)
+(defvar cookie-clicker-cookies-per-second 0)
+(defvar cookie-clicker-automatic-clicker-timer nil)
+(defvar cookie-clicker-automatic-clicker-enabled nil)
 
-(defvar-local cookie-clicker-upgrades
+(defvar cookie-clicker-upgrades
   '((cursor 10 1 0)
     (grandma 50 5 0)
     (farm 100 10 0))
@@ -103,8 +103,8 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
         (insert (format " %s: Cost %d cookies, CPS + %d (Owned: %d)" name cost cps-increase count))
         (insert "\n")))
     (insert "----------------")
-    (insert "\nCookies: 0\n")
-    (insert "CPS: 0\n")
+    (insert (format "\nCookies: %d\n" cookie-clicker-cookie-count))
+    (insert (format "CPS: %d\n" cookie-clicker-cookies-per-second))
     (cookie-clicker-update-cookie-display)))
 
 (defun cookie-clicker-click-cookie (&optional n)
@@ -193,20 +193,34 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
   "Clean up when Cookie Clicker mode is disabled."
   (cookie-clicker-stop-timer))
 
-(define-derived-mode cookie-clicker-mode special-mode "Cookie Clicker"
-  "Major mode for a basic Cookie Clicker game in Emacs."
-  (setq cookie-clicker-cookie-count 0
+(defun cookie-clicker-reset ()
+  "Reset values for cookie clicker."
+  (interactive)
+  (setq cookie-clicker-update-timer nil
+        cookie-clicker-cookie-count 0
         cookie-clicker-cookies-per-second 0
         cookie-clicker-automatic-clicker-timer nil
+        cookie-clicker-automatic-clicker-enabled nil
+        cookie-clicker-upgrades '((cursor 10 1 0)
+                                  (grandma 50 5 0)
+                                  (farm 100 10 0))))
+
+(define-derived-mode cookie-clicker-mode special-mode "Cookie Clicker"
+  "Major mode for a basic Cookie Clicker game in Emacs."
+  (setq cookie-clicker-automatic-clicker-timer nil
         cookie-clicker-automatic-clicker-enabled nil)
   (add-hook 'kill-buffer-hook 'cookie-clicker-stop-timer nil t)
   (cookie-clicker-start-timer))
 
 (add-hook 'cookie-clicker-mode-hook 'cookie-clicker-mode-disable)
 
-(define-key cookie-clicker-mode-map (kbd "C-c C-c") 'cookie-clicker-click-cookie)
-(define-key cookie-clicker-mode-map (kbd "C-c u") 'cookie-clicker-select-upgrade)
-(define-key cookie-clicker-mode-map (kbd "C-c a") 'cookie-clicker-toggle-automatic-clicker)
+(define-key cookie-clicker-mode-map (kbd "c") 'cookie-clicker-click-cookie)
+(define-key cookie-clicker-mode-map (kbd "u") 'cookie-clicker-select-upgrade)
+(define-key cookie-clicker-mode-map (kbd "1") (lambda () (interactive) (cookie-clicker-buy-upgrade 'cursor)))
+(define-key cookie-clicker-mode-map (kbd "2") (lambda () (interactive) (cookie-clicker-buy-upgrade 'grandma)))
+(define-key cookie-clicker-mode-map (kbd "3") (lambda () (interactive) (cookie-clicker-buy-upgrade 'farm)))
+(define-key cookie-clicker-mode-map (kbd "a") 'cookie-clicker-toggle-automatic-clicker)
+(define-key cookie-clicker-mode-map (kbd "R") 'cookie-clicker-reset)
 
 (provide 'cookie-clicker-mode)
 
