@@ -63,6 +63,10 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
             (cookie-clicker-buy-upgrade (intern selected-upgrade))
           (message "Invalid upgrade selected."))))))
 
+(defun cookie-clicker-clickable-button (name callback)
+  "Create a clickable button with NAME that triggers CALLBACK on click."
+  (insert-text-button name 'action callback 'follow-link t))
+
 (defun cookie-clicker-setup ()
   "Set up the initial state of the Cookie Clicker game."
   (let ((buffer-read-only nil))
@@ -71,10 +75,11 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
     (insert "C-c C-c to click cookies\n")
     (insert "Available upgrades:\n")
     (dolist (upgrade cookie-clicker-upgrades)
-      (insert (format "%s: Cost %d cookies, CPS + %d\n"
-                      (car upgrade) ; Name
-                      (cadr upgrade) ; Cost
-                      (caddr upgrade)))) ; CPS Increase
+      (let ((name (car upgrade)))
+        (cookie-clicker-clickable-button (format "- %s: Cost %d cookies, CPS + %d" name (cadr upgrade) (caddr upgrade))
+                          `(lambda (_button) (cookie-clicker-buy-upgrade ',name)))
+        (insert "\n")))
+    (insert "-------------------\n")
     (insert "\nCookies: 0\n")
     (insert "CPS: 0\n")
     (cookie-clicker-update-cookie-display)))
