@@ -87,6 +87,7 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
 
 (defun cookie-clicker-setup ()
   "Set up the initial state of the Cookie Clicker game."
+  (cookie-clicker-start-timer)
   (let ((buffer-read-only nil))
     (erase-buffer)
     (insert "Welcome to Cookie Clicker!\n\n")
@@ -158,8 +159,7 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
         (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
           (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
         (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
-          (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second)))))
-    (message "CPS: %d, Cookies: %d" cookie-clicker-cookies-per-second cookie-clicker-cookie-count)))
+          (replace-match (format "CPS: %d" cookie-clicker-cookies-per-second)))))))
 
 (defun cookie-clicker-start ()
   "Start a new Cookie Clicker game in a new buffer."
@@ -172,6 +172,7 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
 
 (defun cookie-clicker-start-timer ()
   "Start the auto-update timer for Cookie Clicker mode."
+  (cookie-clicker-stop-timer)
   (setq cookie-clicker-update-timer
         (run-at-time nil 1 'cookie-clicker-update)))
 
