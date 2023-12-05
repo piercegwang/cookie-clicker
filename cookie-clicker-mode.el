@@ -31,9 +31,9 @@
 (defvar cookie-clicker-automatic-clicker-enabled nil)
 
 (defvar cookie-clicker-upgrades
-  '((cursor 10 1 0)
-    (grandma 50 5 0)
-    (farm 100 10 0))
+  '((cursor nil name "Cursor" base-cost 10 current-cost 10 base-cps 1 cur-cps 1 count 0)
+    (grandma nil name "Grandma" base-cost 50 current-cost 50 base-cps 5 cur-cps 5 count 0)
+    (farm nil name "Farm" base-cost 100 current-cost 100 base-cps 10 cur-cps 10 count 0))
   "List of upgrades with their names, costs, CPS increase, and count.")
 
 ;; (defun cookie-clicker-buy-upgrade (upgrade)
@@ -57,14 +57,15 @@
 UPGRADE is a symbol representing the kind of upgrade to buy."
   (let ((upgrade-info (assoc upgrade cookie-clicker-upgrades)))
     (if upgrade-info
-        (let* ((cost (cadr upgrade-info))
-               (cps-increase (caddr upgrade-info))
-               (count (cadddr upgrade-info)))
+        (let* ((cost (plist-get upgrade-info 'current-cost))
+               (cps-increase (plist-get upgrade-info 'base-cps))
+               (count (plist-get upgrade-info 'count)))
           (if (>= cookie-clicker-cookie-count cost)
               (progn
                 (setq cookie-clicker-cookie-count (- cookie-clicker-cookie-count cost)
                       cookie-clicker-cookies-per-second (+ cookie-clicker-cookies-per-second cps-increase))
-                (setcar (last upgrade-info) (1+ count))
+                (plist-put upgrade-info 'count (1+ count))
+                (plist-put upgrade-info 'current-cost (* (plist-get upgrade-info 'base-cost) (expt 1.1 count)))
                 (cookie-clicker-update-cookie-display)
                 (message "You bought a %s upgrade! CPS: %d" upgrade cookie-clicker-cookies-per-second))
             (message "Not enough cookies to buy the %s upgrade. You need at least %d cookies." upgrade cost)))
@@ -94,13 +95,14 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
     (insert "C-c C-c to click cookies\n")
     (insert "Available upgrades:\n")
     (dolist (upgrade cookie-clicker-upgrades)
-      (let* ((name (car upgrade))
-             (cost (cadr upgrade))
-             (cps-increase (caddr upgrade))
-             (count (cadddr upgrade)))
+      (let* ((symbol (car upgrade))
+             (name (plist-get upgrade 'name))
+             (cost (plist-get upgrade 'current-cost))
+             (cps-increase (plist-get upgrade 'cur-cps))
+             (count (plist-get upgrade 'count)))
         (insert "- ")
         (cookie-clicker-clickable-button (format "[Buy]" name cost cps-increase count)
-                          `(lambda (_button) (cookie-clicker-buy-upgrade ',name)))
+                          `(lambda (_button) (cookie-clicker-buy-upgrade ',symbol)))
         (insert (format " %s: Cost %d cookies, CPS + %d (Owned: %d)" name cost cps-increase count))
         (insert "\n")))
     (insert "----------------")
@@ -150,12 +152,13 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
       (save-excursion
         (goto-char (point-min))
         (while (re-search-forward "\\([a-zA-Z]+\\): Cost \\([0-9]+\\) cookies, CPS \\+ \\([0-9]+\\) (Owned: \\([0-9]+\\))" nil t)
-          (let* ((upgrade-sym (intern (match-string 1)))
+          (let* ((upgrade-sym (intern (downcase (match-string 1))))
                  (upgrade (assoc upgrade-sym cookie-clicker-upgrades))
-                 (cost (cadr upgrade))
-                 (cps-increase (caddr upgrade))
-                 (count (cadddr upgrade)))
-            (replace-match (format "%s: Cost %d cookies, CPS + %d (Owned: %d)" upgrade-sym cost cps-increase count))))
+                 (name (plist-get upgrade 'name))
+                 (cost (plist-get upgrade 'current-cost))
+                 (cps-increase (plist-get upgrade 'base-cps))
+                 (count (plist-get upgrade 'count)))
+            (replace-match (format "%s: Cost %d cookies, CPS + %d (Owned: %d)" name cost cps-increase count))))
         (when (re-search-forward "Cookies: \\([0-9]+\\)" nil t)
           (replace-match (format "Cookies: %d" cookie-clicker-cookie-count)))
         (when (re-search-forward "CPS: \\([0-9]+\\)" nil t)
@@ -202,9 +205,9 @@ UPGRADE is a symbol representing the kind of upgrade to buy."
         cookie-clicker-cookies-per-second 0
         cookie-clicker-automatic-clicker-timer nil
         cookie-clicker-automatic-clicker-enabled nil
-        cookie-clicker-upgrades '((cursor 10 1 0)
-                                  (grandma 50 5 0)
-                                  (farm 100 10 0))))
+        cookie-clicker-upgrades '((cursor nil name "Cursor" base-cost 10 current-cost 10 base-cps 1 cur-cps 1 count 0)
+                                  (grandma nil name "Grandma" base-cost 50 current-cost 50 base-cps 5 cur-cps 5 count 0)
+                                  (farm nil name "Farm" base-cost 100 current-cost 100 base-cps 10 cur-cps 10 count 0))))
 
 (define-derived-mode cookie-clicker-mode special-mode "Cookie Clicker"
   "Major mode for a basic Cookie Clicker game in Emacs."
